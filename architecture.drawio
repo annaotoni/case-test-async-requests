@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="drawio" version="26.0.0">
+  <diagram name="Arquitetura">
+    <mxGraphModel width="1400" height="900" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Título -->
+        <mxCell id="2" value="Arquitetura de Processamento de Solicitações" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=16;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="200" y="10" width="780" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Cliente HTTP -->
+        <mxCell id="3" value="Cliente HTTP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="470" y="70" width="180" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- FastAPI (Adapter Inbound HTTP) -->
+        <mxCell id="4" value="&lt;b&gt;FastAPI&lt;/b&gt;&lt;br&gt;CorrelationIdMiddleware · RateLimiter(Redis) · /health · /health/ready" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="80" y="200" width="960" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- MySQL (Persistência) -->
+        <mxCell id="5" value="MySQL" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="380" width="180" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- Redis (Cache + Rate Limit) -->
+        <mxCell id="6" value="Redis" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="450" y="380" width="200" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- Kafka (Mensageria) -->
+        <mxCell id="7" value="Kafka&lt;br&gt;requests.created" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="820" y="380" width="220" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- Consumer (Adapter Inbound Kafka) -->
+        <mxCell id="8" value="&lt;b&gt;Consumer&lt;/b&gt;&lt;br&gt;retry · backoff · idempotência" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="820" y="560" width="220" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Kafka DLQ -->
+        <mxCell id="9" value="Kafka DLQ&lt;br&gt;requests.created.dlq" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="820" y="730" width="220" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- ARESTAS -->
+
+        <!-- Cliente -> FastAPI -->
+        <mxCell id="10" value="POST /requests&#xa;GET /requests/{id}" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=11;" edge="1" source="3" target="4" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- FastAPI -> MySQL (persiste PENDING) -->
+        <mxCell id="11" value="persiste PENDING" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=11;exitX=0.1;exitY=1;exitDx=0;exitDy=0;" edge="1" source="4" target="5" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- FastAPI -> Redis (rate limit + cache-aside) -->
+        <mxCell id="12" value="rate limit · cache-aside" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=11;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" source="4" target="6" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- FastAPI -> Kafka (publica evento) -->
+        <mxCell id="13" value="publica requests.created" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=11;exitX=0.9;exitY=1;exitDx=0;exitDy=0;" edge="1" source="4" target="7" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Kafka -> Consumer (consome mensagem) -->
+        <mxCell id="14" value="consome mensagem" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=11;" edge="1" source="7" target="8" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Consumer -> MySQL (atualiza status) — rota pela margem esquerda -->
+        <mxCell id="15" value="atualiza status" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=11;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="8" target="5" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="30" y="600" />
+              <mxPoint x="30" y="425" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Consumer -> Redis (invalida cache) — rota pelo gap entre Redis e Kafka -->
+        <mxCell id="16" value="invalida cache" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=11;exitX=0;exitY=0.3;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="8" target="6" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="760" y="584" />
+              <mxPoint x="760" y="425" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Consumer -> DLQ (falha após retries) -->
+        <mxCell id="17" value="falha após retries" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=11;strokeColor=#b85450;fontColor=#b85450;" edge="1" source="8" target="9" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Legenda -->
+        <mxCell id="18" value="&lt;b&gt;Legenda&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;b&gt;POST /requests:&lt;/b&gt;&lt;br&gt;1. FastAPI persiste PENDING + publica evento&lt;br&gt;2. Consumer atualiza status (APPROVED / MANUAL_REVIEW)&lt;br&gt;3. Consumer invalida cache Redis&lt;br&gt;&lt;br&gt;&lt;b&gt;GET /requests/{id}:&lt;/b&gt;&lt;br&gt;cache-aside: Redis hit &#x2192; resposta&lt;br&gt;Redis miss &#x2192; MySQL &#x2192; popula cache" style="text;html=1;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;whiteSpace=wrap;overflow=hidden;fontSize=11;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="1090" y="380" width="280" height="210" as="geometry" />
+        </mxCell>
+
+        <!-- Regra de Negócio -->
+        <mxCell id="19" value="&lt;b&gt;Regra de Negócio&lt;/b&gt;&lt;br&gt;&lt;br&gt;value &#x2264; 1000 &#x2192; APPROVED&lt;br&gt;value &gt; 1000 &#x2192; MANUAL_REVIEW" style="text;html=1;strokeColor=#82b366;fillColor=#d5e8d4;align=left;verticalAlign=top;spacingLeft=8;spacingTop=8;whiteSpace=wrap;overflow=hidden;fontSize=11;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="1090" y="610" width="280" height="90" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
