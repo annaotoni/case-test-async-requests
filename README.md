@@ -1,4 +1,4 @@
-# Desafio Técnico
+# Async Request Processing API
 
 API assíncrona de processamento de solicitações usando Python · FastAPI · Kafka · MySQL · Redis.
 
@@ -51,7 +51,7 @@ Adapter Outbound (SQLAlchemy / Kafka / Redis)
 
 O consumer usa `enable_auto_commit=False` e commita o offset manualmente **após** a persistência no MySQL. A sequência é: processar → persistir → commit de offset. Qualquer falha no meio recai num `continue` que pula o `consumer.commit()` — a mensagem será reenviada na reinicialização.
 
-A pergunta de entrevista é: *"e se o processo morrer entre atualizar o MySQL e commitar o offset?"* A resposta: a mensagem reprocessa, e a guarda `status != PENDING` em `ProcessRequestUseCase` torna o reprocessamento um no-op seguro. Esse par — at-least-once no broker + transição idempotente no domínio — entrega efeito de exactly-once sem exactly-once delivery, que tem custo de latência e requer broker específico.
+Se o processo morrer entre atualizar o MySQL e commitar o offset, a mensagem reprocessa. A guarda `status != PENDING` em `ProcessRequestUseCase` torna o reprocessamento um no-op seguro. Esse par — at-least-once no broker + transição idempotente no domínio — entrega efeito de exactly-once sem exactly-once delivery, que tem custo de latência e requer broker específico.
 
 ### Dual-write MySQL ↔ Kafka (por que o Outbox ficou como evolução)
 
@@ -59,7 +59,7 @@ Persistir no MySQL e publicar no Kafka são operações em sistemas distintos �
 
 **A solução correta é o padrão Transactional Outbox**: escrever o evento numa tabela `outbox` dentro da mesma transação do domínio; um relay lê e publica no Kafka de forma assíncrona. A atomicidade MySQL garante que estado e evento nunca ficam dessincronizados.
 
-Optei por não implementar o Outbox neste prazo porque: (1) aumentaria significativamente a complexidade operacional (novo processo, nova tabela, nova migration); (2) o impacto prático é baixo num desafio técnico onde o broker e a aplicação estão no mesmo Docker Compose e raramente caem no meio de um produce; (3) a cobertura de testes e a solidez dos itens de correctness existentes valem mais aqui.
+O Outbox está listado como evolução porque aumentaria significativamente a complexidade operacional (novo processo, nova tabela, nova migration). O impacto prático é baixo quando broker e aplicação estão no mesmo host e raramente caem no meio de um produce.
 ### Cache Redis: cache-aside + invalidação por deleção
 
 - **Leitura**: Redis → miss → MySQL → popula `request:{id}` com TTL de 15 min.
@@ -69,7 +69,7 @@ Invalidar por deleção é mais seguro que write-through porque elimina a janela
 
 ### Rate limiting: por que existe apesar de não ser requisito
 
-Rate limiting não foi pedido no desafio. Foi adicionado porque: (1) o endpoint `POST /requests` é o único que cria estado persistente — um loop de chamadas poderia encher o banco; (2) Redis já estava no stack, custo de implementação é S; (3) demonstra cuidado com hardening mesmo em entrega de prazo curto.
+Foi adicionado porque: (1) o endpoint `POST /requests` é o único que cria estado persistente — um loop de chamadas poderia encher o banco; (2) Redis já estava no stack, custo de implementação é baixo.
 
 A implementação usa `pipeline(transaction=True)` com `INCR + EXPIRE` em MULTI/EXEC: a alternativa ingênua (`INCR` seguido de `EXPIRE` condicional em dois comandos) tem race condition que torna o contador imortal sob concorrência. O pipeline elimina essa janela.
 
@@ -85,7 +85,7 @@ O consumer tem retry linear com teto (`min(attempt, MAX_BACKOFF_SECONDS)`). Não
 
 ## Segurança em produção
 
-O que está implementado cobre o mínimo funcional de um desafio técnico. Um ambiente real exigiria as seguintes camadas adicionais:
+Um ambiente de produção exigiria as seguintes camadas adicionais:
 
 **Autenticação e autorização**
 - JWT com curta expiração (15 min) + refresh token rotativo. FastAPI tem integração nativa via `OAuth2PasswordBearer` e `python-jose`.
@@ -229,5 +229,4 @@ tests/
 ├── fakes.py         # FakeRepo, FakePublisher, FakeCache compartilhados
 ├── unit/            # Domínio + use cases (sem infra)
 └── integration/     # Repositório (SQLite) + e2e HTTP + consumer flow
-plans/               # Decisões de melhoria com critérios verificáveis
 ```
