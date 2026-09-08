@@ -202,7 +202,7 @@ python -m pytest -m unit
 python -m pytest -m integration
 
 # Sem coverage (mais rápido em dev)
-python -m pytest -p no:cov
+python -m pytest --no-cov
 ```
 
 Cobertura atual: **84%** — os caminhos críticos cobertos incluem:
