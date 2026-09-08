@@ -2,6 +2,12 @@
 
 API assíncrona de processamento de solicitações usando Python · FastAPI · Kafka · MySQL · Redis.
 
+## Documentação complementar
+
+- [Decisões de Arquitetura](decisoes-arquitetura.pdf) — registro das decisões técnicas (ADR): contexto, decisão, alternativa descartada e consequência de cada uma.
+- [Manual do Projeto](manual-projeto.pdf) — o que cada arquivo do repositório executa, organizado como a árvore de pastas.
+- [Dashboard de Execução](dashboard-execucao.pdf) — resultado real de uma execução da suíte de testes, do stack Docker completo e da API exercitada.
+
 ## Arquitetura
 
 Hexagonal (Ports & Adapters). O domínio não conhece Kafka, MySQL, Redis nem FastAPI.
