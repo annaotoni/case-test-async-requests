@@ -63,6 +63,18 @@ def test_process_invalidates_cache():
     assert cache.get(f"request:{req.id}") is None
 
 
+def test_mark_failed_updates_status_and_invalidates_cache():
+    repo, cache = FakeRepo(), FakeCache()
+    req = Request(customer_id="1", value=Decimal("500"))
+    repo.save(req)
+    cache.set(request_cache_key(req.id), "stale_data", 300)
+
+    ProcessRequestUseCase(repo, cache).mark_failed(req.id)
+
+    assert repo.get_by_id(req.id).status == RequestStatus.FAILED
+    assert cache.get(request_cache_key(req.id)) is None
+
+
 def test_process_nonexistent_returns_none():
     repo, cache = FakeRepo(), FakeCache()
     result = ProcessRequestUseCase(repo, cache).execute(uuid4())

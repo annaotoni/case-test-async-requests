@@ -8,7 +8,6 @@ from kafka import KafkaConsumer, KafkaProducer
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.domain.enums import RequestStatus
 from app.infrastructure.cache.redis_cache import RedisCache
 from app.infrastructure.config import settings
 from app.infrastructure.persistence.repository import SQLAlchemyRequestRepository
@@ -41,7 +40,8 @@ def _mark_failed(request_id: str) -> None:
     session = SessionLocal()
     try:
         repo = SQLAlchemyRequestRepository(session)
-        repo.update_status(UUID(request_id), RequestStatus.FAILED)
+        cache = RedisCache(redis_client)
+        ProcessRequestUseCase(repo, cache).mark_failed(UUID(request_id))
     finally:
         session.close()
 

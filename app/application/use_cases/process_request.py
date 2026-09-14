@@ -24,3 +24,7 @@ class ProcessRequestUseCase:
         self._cache.delete(request_cache_key(request_id))
         request.status = new_status
         return request
+
+    def mark_failed(self, request_id: UUID) -> None:
+        self._repo.update_status(request_id, RequestStatus.FAILED)
+        self._cache.delete(request_cache_key(request_id))
